@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2019-2021 Parity Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -284,30 +284,6 @@ impl<'a> OneOrMany<DispatchClass> for &'a [DispatchClass] {
 	type Iter = sp_std::iter::Cloned<sp_std::slice::Iter<'a, DispatchClass>>;
 	fn into_iter(self) -> Self::Iter {
 		self.iter().cloned()
-	}
-}
-
-/// Primitives related to priority management of Frame.
-pub mod priority {
-	/// The starting point of all Operational transactions. 3/4 of u64::MAX.
-	pub const LIMIT: u64 = 13_835_058_055_282_163_711_u64;
-
-	/// Wrapper for priority of different dispatch classes.
-	///
-	/// This only makes sure that any value created for the operational dispatch class is
-	/// incremented by [`LIMIT`].
-	pub enum FrameTransactionPriority {
-		Normal(u64),
-		Operational(u64),
-	}
-
-	impl From<FrameTransactionPriority> for u64 {
-		fn from(priority: FrameTransactionPriority) -> Self {
-			match priority {
-				FrameTransactionPriority::Normal(inner) => inner,
-				FrameTransactionPriority::Operational(inner) => inner.saturating_add(LIMIT),
-			}
-		}
 	}
 }
 

@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,15 +57,20 @@ pub struct OnChainSequentialPhragmen<T: Config>(PhantomData<T>);
 ///
 /// WARNING: the user of this pallet must ensure that the `Accuracy` type will work nicely with the
 /// normalization operation done inside `seq_phragmen`. See
-/// [`sp_npos_elections::assignment::try_normalize`] for more info.
+/// [`sp_npos_elections::Assignment::try_normalize`] for more info.
 pub trait Config: frame_system::Config {
 	/// The accuracy used to compute the election:
 	type Accuracy: PerThing128;
 	/// Something that provides the data for election.
-	type DataProvider: ElectionDataProvider<Self::AccountId, Self::BlockNumber>;
+	type DataProvider: ElectionDataProvider<
+		AccountId = Self::AccountId,
+		BlockNumber = Self::BlockNumber,
+	>;
 }
 
-impl<T: Config> ElectionProvider<T::AccountId, T::BlockNumber> for OnChainSequentialPhragmen<T> {
+impl<T: Config> ElectionProvider for OnChainSequentialPhragmen<T> {
+	type AccountId = T::AccountId;
+	type BlockNumber = T::BlockNumber;
 	type Error = Error;
 	type DataProvider = T::DataProvider;
 
@@ -82,9 +87,8 @@ impl<T: Config> ElectionProvider<T::AccountId, T::BlockNumber> for OnChainSequen
 		let stake_of =
 			|w: &T::AccountId| -> VoteWeight { stake_map.get(w).cloned().unwrap_or_default() };
 
-		let ElectionResult { winners: _, assignments } =
-			seq_phragmen::<_, T::Accuracy>(desired_targets as usize, targets, voters, None)
-				.map_err(Error::from)?;
+		let ElectionResult::<_, T::Accuracy> { winners: _, assignments } =
+			seq_phragmen(desired_targets as usize, targets, voters, None).map_err(Error::from)?;
 
 		let staked = assignment_ratio_to_staked_normalized(assignments, &stake_of)?;
 
@@ -145,6 +149,7 @@ mod tests {
 		type OnKilledAccount = ();
 		type SystemWeightInfo = ();
 		type OnSetCode = ();
+		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 
 	impl Config for Runtime {
@@ -155,16 +160,22 @@ mod tests {
 	type OnChainPhragmen = OnChainSequentialPhragmen<Runtime>;
 
 	mod mock_data_provider {
+		use frame_support::{bounded_vec, traits::ConstU32};
+
 		use super::*;
-		use crate::data_provider;
+		use crate::{data_provider, VoterOf};
 
 		pub struct DataProvider;
-		impl ElectionDataProvider<AccountId, BlockNumber> for DataProvider {
-			const MAXIMUM_VOTES_PER_VOTER: u32 = 2;
-			fn voters(
-				_: Option<usize>,
-			) -> data_provider::Result<Vec<(AccountId, VoteWeight, Vec<AccountId>)>> {
-				Ok(vec![(1, 10, vec![10, 20]), (2, 20, vec![30, 20]), (3, 30, vec![10, 30])])
+		impl ElectionDataProvider for DataProvider {
+			type AccountId = AccountId;
+			type BlockNumber = BlockNumber;
+			type MaxVotesPerVoter = ConstU32<2>;
+			fn voters(_: Option<usize>) -> data_provider::Result<Vec<VoterOf<Self>>> {
+				Ok(vec![
+					(1, 10, bounded_vec![10, 20]),
+					(2, 20, bounded_vec![30, 20]),
+					(3, 30, bounded_vec![10, 30]),
+				])
 			}
 
 			fn targets(_: Option<usize>) -> data_provider::Result<Vec<AccountId>> {

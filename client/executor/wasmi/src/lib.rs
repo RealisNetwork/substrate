@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2019-2021 Parity Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -736,7 +736,7 @@ pub struct WasmiInstance {
 unsafe impl Send for WasmiInstance {}
 
 impl WasmInstance for WasmiInstance {
-	fn call(&self, method: InvokeMethod, data: &[u8]) -> Result<Vec<u8>, Error> {
+	fn call(&mut self, method: InvokeMethod, data: &[u8]) -> Result<Vec<u8>, Error> {
 		// We reuse a single wasm instance for multiple calls and a previous call (if any)
 		// altered the state. Therefore, we need to restore the instance to original state.
 
@@ -767,7 +767,7 @@ impl WasmInstance for WasmiInstance {
 		)
 	}
 
-	fn get_global_const(&self, name: &str) -> Result<Option<sp_wasm_interface::Value>, Error> {
+	fn get_global_const(&mut self, name: &str) -> Result<Option<sp_wasm_interface::Value>, Error> {
 		match self.instance.export_by_name(name) {
 			Some(global) => Ok(Some(
 				global

@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@ use sp_runtime::{
 	offchain::storage::{MutateStorageError, StorageValueRef},
 	DispatchError, SaturatedConversion,
 };
-use sp_std::{boxed::Box, cmp::Ordering, convert::TryFrom, vec::Vec};
+use sp_std::{cmp::Ordering, prelude::*};
 
 /// Storage key used to store the last block number at which offchain worker ran.
 pub(crate) const OFFCHAIN_LAST_BLOCK: &[u8] = b"parity/multi-phase-unsigned-election";
@@ -47,11 +47,7 @@ pub(crate) const OFFCHAIN_CACHED_CALL: &[u8] = b"parity/multi-phase-unsigned-ele
 
 /// A voter's fundamental data: their ID, their stake, and the list of candidates for whom they
 /// voted.
-pub type Voter<T> = (
-	<T as frame_system::Config>::AccountId,
-	sp_npos_elections::VoteWeight,
-	Vec<<T as frame_system::Config>::AccountId>,
-);
+pub type VoterOf<T> = frame_election_provider_support::VoterOf<<T as Config>::DataProvider>;
 
 /// The relative distribution of a voter's stake among the winning targets.
 pub type Assignment<T> =
@@ -544,7 +540,7 @@ impl<T: Config> Pallet<T> {
 
 		// Time to finish. We might have reduced less than expected due to rounding error. Increase
 		// one last time if we have any room left, the reduce until we are sure we are below limit.
-		while voters + 1 <= max_voters && weight_with(voters + 1) < max_weight {
+		while voters < max_voters && weight_with(voters + 1) < max_weight {
 			voters += 1;
 		}
 		while voters.checked_sub(1).is_some() && weight_with(voters) > max_weight {
@@ -651,7 +647,7 @@ mod max_weight {
 		fn elect_queued(a: u32, d: u32) -> Weight {
 			unreachable!()
 		}
-		fn create_snapshot_internal() -> Weight {
+		fn create_snapshot_internal(v: u32, t: u32) -> Weight {
 			unreachable!()
 		}
 		fn on_initialize_nothing() -> Weight {
@@ -749,7 +745,9 @@ mod tests {
 	};
 	use codec::Decode;
 	use frame_benchmarking::Zero;
-	use frame_support::{assert_noop, assert_ok, dispatch::Dispatchable, traits::OffchainWorker};
+	use frame_support::{
+		assert_noop, assert_ok, bounded_vec, dispatch::Dispatchable, traits::OffchainWorker,
+	};
 	use sp_npos_elections::IndexAssignment;
 	use sp_runtime::{
 		offchain::storage_lock::{BlockAndTime, StorageLock},
@@ -1048,8 +1046,8 @@ mod tests {
 	fn unsigned_per_dispatch_checks_can_only_submit_threshold_better() {
 		ExtBuilder::default()
 			.desired_targets(1)
-			.add_voter(7, 2, vec![10])
-			.add_voter(8, 5, vec![10])
+			.add_voter(7, 2, bounded_vec![10])
+			.add_voter(8, 5, bounded_vec![10])
 			.solution_improvement_threshold(Perbill::from_percent(50))
 			.build_and_execute(|| {
 				roll_to(25);
@@ -1241,35 +1239,62 @@ mod tests {
 	}
 
 	#[test]
-	fn ocw_clears_cache_after_election() {
-		let (mut ext, _pool) = ExtBuilder::default().build_offchainify(0);
+	fn ocw_clears_cache_on_unsigned_phase_open() {
+		let (mut ext, pool) = ExtBuilder::default().build_offchainify(0);
 		ext.execute_with(|| {
-			roll_to(25);
-			assert_eq!(MultiPhase::current_phase(), Phase::Unsigned((true, 25)));
+			const BLOCK: u64 = 25;
+			let block_plus = |delta: u64| BLOCK + delta;
+			let offchain_repeat = <Runtime as Config>::OffchainRepeat::get();
 
-			// we must clear the offchain storage to ensure the offchain execution check doesn't get
-			// in the way.
-			let mut storage = StorageValueRef::persistent(&OFFCHAIN_LAST_BLOCK);
-			storage.clear();
+			roll_to(BLOCK);
+			// we are on the first block of the unsigned phase
+			assert_eq!(MultiPhase::current_phase(), Phase::Unsigned((true, BLOCK)));
 
 			assert!(
 				!ocw_solution_exists::<Runtime>(),
 				"no solution should be present before we mine one",
 			);
 
-			// creates and cache a solution
-			MultiPhase::offchain_worker(25);
+			// create and cache a solution on the first block of the unsigned phase
+			MultiPhase::offchain_worker(BLOCK);
 			assert!(
 				ocw_solution_exists::<Runtime>(),
 				"a solution must be cached after running the worker",
 			);
 
-			// after an election, the solution must be cleared
+			// record the submitted tx,
+			let tx_cache_1 = pool.read().transactions[0].clone();
+			// and assume it has been processed.
+			pool.try_write().unwrap().transactions.clear();
+
+			// after an election, the solution is not cleared
 			// we don't actually care about the result of the election
-			roll_to(26);
 			let _ = MultiPhase::do_elect();
-			MultiPhase::offchain_worker(26);
-			assert!(!ocw_solution_exists::<Runtime>(), "elections must clear the ocw cache");
+			MultiPhase::offchain_worker(block_plus(1));
+			assert!(ocw_solution_exists::<Runtime>(), "elections does not clear the ocw cache");
+
+			// submit a solution with the offchain worker after the repeat interval
+			MultiPhase::offchain_worker(block_plus(offchain_repeat + 1));
+
+			// record the submitted tx,
+			let tx_cache_2 = pool.read().transactions[0].clone();
+			// and assume it has been processed.
+			pool.try_write().unwrap().transactions.clear();
+
+			// the OCW submitted the same solution twice since the cache was not cleared.
+			assert_eq!(tx_cache_1, tx_cache_2);
+
+			let current_block = block_plus(offchain_repeat * 2 + 2);
+			// force the unsigned phase to start on the current block.
+			CurrentPhase::<Runtime>::set(Phase::Unsigned((true, current_block)));
+
+			// clear the cache and create a solution since we are on the first block of the unsigned
+			// phase.
+			MultiPhase::offchain_worker(current_block);
+			let tx_cache_3 = pool.read().transactions[0].clone();
+
+			// the submitted solution changes because the cache was cleared.
+			assert_eq!(tx_cache_1, tx_cache_3);
 		})
 	}
 
