@@ -7655,7 +7655,7 @@ dependencies = [
 
 [[package]]
 name = "sc-allocator"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "log 0.4.14",
  "sp-core",
@@ -9491,7 +9491,7 @@ dependencies = [
 
 [[package]]
 name = "sp-core"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "base58",
  "bitflags",
@@ -9646,7 +9646,7 @@ dependencies = [
 
 [[package]]
 name = "sp-keyring"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -9674,7 +9674,7 @@ dependencies = [
 
 [[package]]
 name = "sp-maybe-compressed-blob"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "zstd",
 ]
@@ -9753,7 +9753,7 @@ dependencies = [
 
 [[package]]
 name = "sp-runtime"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "either",
  "hash256-std-hasher",
@@ -9780,7 +9780,7 @@ dependencies = [
 
 [[package]]
 name = "sp-runtime-interface"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec 2.3.1",
@@ -10058,7 +10058,7 @@ dependencies = [
 
 [[package]]
 name = "sp-wasm-interface"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "impl-trait-for-tuples",
  "log 0.4.14",
