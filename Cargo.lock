@@ -9491,7 +9491,7 @@ dependencies = [
 
 [[package]]
 name = "sp-core"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "base58",
  "bitflags",
@@ -9753,7 +9753,7 @@ dependencies = [
 
 [[package]]
 name = "sp-runtime"
-version = "4.1.0-dev"
+version = "4.0.0-dev"
 dependencies = [
  "either",
  "hash256-std-hasher",

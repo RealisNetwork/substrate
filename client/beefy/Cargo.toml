@@ -22,9 +22,9 @@ sp-api = { version = "4.0.0-dev", path = "../../primitives/api" }
 sp-application-crypto = { version = "4.0.0", path = "../../primitives/application-crypto" }
 sp-arithmetic = { version = "4.0.0", path = "../../primitives/arithmetic" }
 sp-blockchain = { version = "4.0.0-dev", path = "../../primitives/blockchain" }
-sp-core = { version = "4.1.0-dev", path = "../../primitives/core" }
+sp-core = { version = "4.0.0-dev", path = "../../primitives/core" }
 sp-keystore = { version = "0.10.0", path = "../../primitives/keystore" }
-sp-runtime = { version = "4.1.0-dev", path = "../../primitives/runtime" }
+sp-runtime = { version = "4.0.0-dev", path = "../../primitives/runtime" }
 
 sc-chain-spec = { version = "4.0.0-dev", path = "../../client/chain-spec" }
 sc-utils = { version = "4.0.0-dev", path = "../utils" }
