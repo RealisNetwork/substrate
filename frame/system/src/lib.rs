@@ -1447,6 +1447,24 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
+	// /// Get the current events deposited by the runtime.
+	// ///
+	// /// NOTE: This should only be used in tests. Reading events from the runtime can have a large
+	// /// impact on the PoV size of a block. Users should use alternative and well bounded storage
+	// /// items for any behavior like this.
+	// #[cfg(any(feature = "std", feature = "runtime-benchmarks", test))]
+	// pub fn events() -> Vec<EventRecord<T::Event, T::Hash>> {
+	// 	Self::read_events_no_consensus()
+	// }
+
+	/// Get the current events deposited by the runtime.
+	///
+	/// Should only be called if you know what you are doing and outside of the runtime block
+	/// execution else it can have a large impact on the PoV size of a block.
+	pub fn read_events_no_consensus() -> Vec<EventRecord<T::Event, T::Hash>> {
+		Events::<T>::get()
+	}
+
 	/// Set the block number to something in particular. Can be used as an alternative to
 	/// `initialize` for tests that don't need to bother with the other environment entries.
 	#[cfg(any(feature = "std", feature = "runtime-benchmarks", test))]
