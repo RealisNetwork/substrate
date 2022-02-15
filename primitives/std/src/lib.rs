@@ -80,11 +80,13 @@ impl fmt::Write for Writer {
 
 impl Writer {
 	/// Access the content of this `Writer` e.g. for printout
+	#[must_use]
 	pub fn inner(&self) -> &vec::Vec<u8> {
 		&self.0
 	}
 
 	/// Convert into the content of this `Writer`
+	#[must_use]
 	pub fn into_inner(self) -> vec::Vec<u8> {
 		self.0
 	}

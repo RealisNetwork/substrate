@@ -756,7 +756,7 @@ pub mod pallet {
 							// in case of error.
 						},
 					}
-				}
+				},
 				_ => T::WeightInfo::on_initialize_nothing(),
 			}
 		}
